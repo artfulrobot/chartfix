@@ -23,71 +23,98 @@
  | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
  +--------------------------------------------------------------------+
 *}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
-<script type="text/javascript" src="{$config->resourceBase}packages/OpenFlashChart/js/json/openflashchart.packed.js"></script>
+<script src="{$config->resourceBase}/bower_components/d3/d3.min.js"></script>
+<script src="{$config->resourceBase}/bower_components/crossfilter2/crossfilter.min.js"></script>
+<script src="{$config->resourceBase}/bower_components/dc-2.1.x/dc.min.js"></script>
+<style src="{$config->resourceBase}/bower_components/dc-2.1.x/dc.min.css"></style>
+<style>
+{literal}
+  .dc-chart path.domain {
+    fill: none;
+    stroke: black;
+  }
+{/literal}
+</style>
 {literal}
 <script type="text/javascript">
-function createSWFObject( chartID, divName, xSize, ySize, loadDataFunction ) {
-  var cols = [
-    '#DCECC9', '#B3DDCC', '#8ACDCE', '#62BED2', '#46AACE', '#3D91BE', '#3577AE', '#2D5E9E', '#24448E', '#1C2B7F', '#162065', '#11174B',
-    '#F9CDAC', '#F3ACA2', '#EE8B97', '#E96A8D', '#DB5087', '#B8428C', '#973490', '#742796', '#5E1F88', '#4D1A70', '#3D1459', '#2D0F41',
-    '#FDED86', '#FDE86E', '#F9D063', '#F5B857', '#F0A04B', '#EB8A40', '#E77235', '#E35B2C', '#C74E29', '#9D4429', '#753C2C', '#4C3430',
-  ];
-	var data = JSON.parse(window[loadDataFunction](chartID));
-	console.log("data:", data);
 
-	var ctx = document.getElementById(divName);
+function createSWFObject( chartID, divName, xSize, ySize, loadDataFunction ) {
+
+	var data = JSON.parse(window[loadDataFunction](chartID));
+
+  var div = document.getElementById(divName);
+
+  // Figure out width.
+  var node = div, foundContainer = false;
+  while (node !== document) {
+    node = node.parentNode;
+    if (node.classList.contains('crm-flashchart')) {
+      foundContainer = node;
+      break;
+    }
+  }
 	var w=800;
 	var h=400;
-	var p;
+  if (foundContainer) {
+    w = foundContainer.clientWidth - 32;
+    h = parseInt(w / 2);
+  }
 
-	ctx.innerHTML = `<canvas id="${divName}_chart" width="${w}" height="${h}"></canvas>`;
+  var chartNode = document.createElement('div');
+  var heading = document.createElement('h2');
+  heading.textContent = data.title.text;
+  heading.style.marginBottom = '1rem';
+  heading.style.textAlign = 'center';
+  div.appendChild(heading);
+  div.appendChild(chartNode);
+  var crossfilterData, ndx, dataDimension, dataGroup;
+
 	if (data.elements[0].type === 'bar_glass') {
-		p = {
-				// The type of chart we want to create
-				type: 'bar',
+    crossfilterData = [];
+    for (var i=0; i<data.elements[0].values.length; i++) {
+      crossfilterData.push({value: data.elements[0].values[i], label: data.x_axis.labels.labels[i]});
+    }
+    ndx = crossfilter(crossfilterData);
+    dataDimension = ndx.dimension(d => d.label);
+    dataGroup = dataDimension.group().reduceSum(d => d.value);
+    var ordinals = data.x_axis.labels.labels;
+    var barChart = dc.barChart(chartNode)
+        .width(w)
+        .height(h)
+        .dimension(dataDimension)
+        .group(dataGroup)
+        .gap(4) // px
+        .x(d3.scale.ordinal(ordinals).domain(ordinals))
+        .xUnits(dc.units.ordinal)
+        .margins({top: 10, right: 30, bottom: 30, left: 90})
+        .elasticY(true)
+        .renderLabel(false)
+        .renderHorizontalGridLines(true)
+        .title(item=> item.key + ': ' + item.value)
+        //.turnOnControls(true)
+        .renderTitle(true);
+  }
+  else if (data.elements[0].type === 'pie') {
+    crossfilterData = data.elements[0].values;
+    ndx = crossfilter(crossfilterData);
+    dataDimension = ndx.dimension(d => d.label);
+    dataGroup = dataDimension.group().reduceSum(d => d.value);
 
-				// The data for our dataset
-				data: {
-						labels: data.x_axis.labels.labels,
-						datasets: [{
-								label: data.title.text,
-                backgroundColor: cols,
-								// borderColor: cols,
-								data: data.elements[0].values
-						}]
-				},
-
-				// Configuration options go here
-				options: {
-          title: { display: true, text: data.title.text },
-        }
-		};
-	}
-	else if (data.elements[0].type === 'pie') {
-		p = {
-				// The type of chart we want to create
-				type: 'pie',
-
-				// The data for our dataset
-				data: {
-					datasets: [{
-						data: data.elements[0].values.map(i => i.value),
-						backgroundColor: cols,
-					}],
-					labels: data.elements[0].values.map(i => i.label),
-				},
-
-				// Configuration options go here
-				options: {
-          title: { display: true, text: data.title.text },
-          legend: { position:'right' },
-        }
-		};
-
-	}
-	console.log("args", p);
-	var chart = new Chart(ctx.childNodes[0].getContext('2d'), p);
+    var pieChart = dc.pieChart(chartNode)
+        .width(w)
+        .height(h)
+        .radius(parseInt(h / 2) - 5) // define pie radius
+        .innerRadius(parseInt(h / 3) - 5) // optional
+        .legend(dc.legend().legendText(d => d.name))
+        .dimension(dataDimension)
+        .group(dataGroup)
+        .renderLabel(false)
+        .title(item=> item.key + ': ' + item.value)
+        .turnOnControls(true)
+        .renderTitle(true);
+  }
+  // Delay rendering so that animation looks good.
+  window.setTimeout(() => dc.renderAll(), 1500);
 }
 </script>
 {/literal}
