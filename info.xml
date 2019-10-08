@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <extension key="chartfix" type="module">
   <file>chartfix</file>
-  <name>FIXME</name>
-  <description>FIXME</description>
+  <name>chartfix</name>
+  <description>The master branch replaces core open flash chart with chartjs (from CDN). This draws on a <canvas> which makes copying the image easy.</description>
   <license>AGPL-3.0</license>
   <maintainer>
     <author>FIXME</author>
