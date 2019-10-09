@@ -1,6 +1,11 @@
 # chartfix
 
-This is proof of concept pre-core merge request.
+A better version of this functionality will be present in core CiviCRM soon (hopefully by Nov 2019 - I'll update this readme then).
+
+In the mean time you can install from the dc branch ([download extension .zip](https://github.com/artfulrobot/chartfix/archive/dc.zip)) to bring charts back to your CiviCRM. You'll want/need to uninstall this once the core update happens.
+
+## random notes
+
 
 The master branch replaces core open flash chart with chartjs (from CDN).
 This draws on a `<canvas>` which makes copying the image easy.
